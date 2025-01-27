@@ -4,37 +4,93 @@ import { encodedRedirect } from "@/utils/utils";
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 export const signUpAction = async (formData: FormData) => {
-  const email = formData.get("email")?.toString();
-  const password = formData.get("password")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
-  if (!email || !password) {
-    return encodedRedirect(
-      "error",
-      "/sign-up",
-      "Email and password are required",
-    );
-  }
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const username = formData.get("username") as string;
+  const fullName = formData.get("full_name") as string;
+  const birthDate = formData.get("birth_date") as string;
+  const gender = formData.get("gender") as string;
+  const location = formData.get("location") as string;
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
-  });
+  try {
+    // 1. Vérification des champs requis
+    if (!email || !password || !username || !fullName || !birthDate || !gender) {
+      return encodedRedirect(
+        "error",
+        "/sign-up",
+        "Tous les champs obligatoires doivent être remplis"
+      );
+    }
 
-  if (error) {
-    console.error(error.code + " " + error.message);
-    return encodedRedirect("error", "/sign-up", error.message);
-  } else {
+    // 2. Inscription de l'utilisateur
+    const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${origin}/auth/callback`,
+        data: {
+          username,
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (signUpError) {
+      console.error('Signup error:', signUpError);
+      return encodedRedirect(
+        "error",
+        "/sign-up",
+        signUpError.message
+      );
+    }
+
+    if (!user) {
+      return encodedRedirect(
+        "error",
+        "/sign-up",
+        "Erreur lors de la création du compte"
+      );
+    }
+
+    // 3. Création du profil
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        username,
+        full_name: fullName,
+        birth_date: birthDate,
+        gender,
+        location,
+      });
+
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      return encodedRedirect(
+        "error",
+        "/sign-up",
+        "Erreur lors de la création du profil"
+      );
+    }
+
     return encodedRedirect(
       "success",
       "/sign-up",
-      "Thanks for signing up! Please check your email for a verification link.",
+      "Inscription réussie ! Veuillez vérifier votre email pour confirmer votre compte."
+    );
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return encodedRedirect(
+      "error",
+      "/sign-up",
+      "Une erreur inattendue s'est produite"
     );
   }
 };
