@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { motion, PanInfo, useAnimation } from 'framer-motion'
 import { FaHeart, FaComment, FaShare, FaTimes } from 'react-icons/fa'
+import { useAuth } from '@/components/AuthProvider'
 
 type StreamPlayerProps = {
   streamId: string
@@ -11,10 +12,20 @@ type StreamPlayerProps = {
   onSwipeAction?: (direction: 'left' | 'right') => void
 }
 
+type StreamData = {
+  id: string
+  title: string
+  status: 'live' | 'ended'
+  viewerCount: number
+  // ajoutez d'autres propriétés typées selon vos besoins
+}
+
 export default function StreamPlayer({ streamId, onToggleChatAction, likes, comments, onSwipeAction }: StreamPlayerProps) {
+  const { user } = useAuth()
   const playerRef = useRef<HTMLDivElement>(null)
   const controls = useAnimation()
   const [exitX, setExitX] = useState<number>(0)
+  const [streamData, setStreamData] = useState<StreamData | null>(null)
 
   const handleDragEnd = async (event: any, info: PanInfo) => {
     const offset = info.offset.x
