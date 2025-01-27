@@ -19,7 +19,7 @@ interface SignUpFormData {
 export default function Signup() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
-  const type = searchParams.get('type');
+  const error = searchParams.get('error');
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<SignUpFormData>({
@@ -174,7 +174,7 @@ export default function Signup() {
 
         {message && (
           <div className="mb-6">
-            <FormMessage message={{ type: type as 'error' | 'success', message }} />
+            <FormMessage message={message} error={error === 'true'} />
           </div>
         )}
 
